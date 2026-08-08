@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
-import { Link, Scissors, Upload, Download, Sparkles, FileVideo, AlertCircle, CheckCircle2, Youtube, Film } from "lucide-react";
+import { Scissors, Upload, Download, Sparkles, FileVideo, AlertCircle, CheckCircle2, Film } from "lucide-react";
+import { SiYoutube } from "react-icons/si";
 import { parseYouTubeUrl } from "../lib/youtube";
 import { supabaseUrl } from "../lib/supabase";
 
@@ -326,7 +327,7 @@ export default function Home() {
                 YouTube video URL
               </label>
               <div className="relative">
-                <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/30 pointer-events-none" />
+                <SiYoutube className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/30 pointer-events-none" />
                 <input
                   id="youtube-url"
                   type="url"
@@ -495,7 +496,7 @@ export default function Home() {
                     </p>
                   </div>
                   <button
-                    onClick={() => { setVideoFile(null); fileInputRef.current?.value = ""; }}
+                    onClick={() => { setVideoFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
                     className="text-foreground/30 hover:text-foreground/60 text-sm transition-colors cursor-pointer"
                     aria-label="Remove file"
                   >

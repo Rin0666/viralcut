@@ -1,21 +1,32 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
-import Login from "./pages/Login";
-import AuthCallback from "./pages/AuthCallback";
-import Dashboard from "./pages/Dashboard";
-import Analyze from "./pages/Analyze";
+import { lazy, Suspense } from "react";
+
+const Home = lazy(() => import("./pages/Home"));
+
+function PageSkeleton() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-foreground/60 text-sm">Loading...</p>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/analyze/:videoId" element={<Analyze />} />
-        </Routes>
-      </AuthProvider>
+      <Routes>
+        <Route
+          path="*"
+          element={
+            <Suspense fallback={<PageSkeleton />}>
+              <Home />
+            </Suspense>
+          }
+        />
+      </Routes>
     </BrowserRouter>
   );
 }
