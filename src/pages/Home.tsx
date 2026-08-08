@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback } from "react";
-import { Scissors, Upload, Download, Sparkles, FileVideo, AlertCircle, CheckCircle2, Film } from "lucide-react";
+import { Scissors, Upload, Download, Sparkles, FileVideo, AlertCircle, CheckCircle2, Film, Shield } from "lucide-react";
 import { SiYoutube } from "react-icons/si";
 import { parseYouTubeUrl } from "../lib/youtube";
-import { supabaseUrl } from "../lib/supabase";
+import { supabase, supabaseUrl } from "../lib/supabase";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -56,6 +56,7 @@ export default function Home() {
   const [clipProgress, setClipProgress] = useState(0);
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
   const [ffmpegLoading, setFfmpegLoading] = useState(false);
+  const [analysisSource, setAnalysisSource] = useState<"twelvelabs" | "fallback" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // -----------------------------------------------------------------------
@@ -80,12 +81,21 @@ export default function Home() {
     setStep("analyzing");
 
     try {
-      // Show a nice loading state for at least 1.5s so it feels substantial
+      setAnalysisSource(null);
       const startTime = Date.now();
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
       const response = await fetch(EDGE_FUNCTION_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
+        },
         body: JSON.stringify({ videoUrl: `https://www.youtube.com/watch?v=${parsed.id}` }),
       });
 
@@ -103,6 +113,8 @@ export default function Home() {
       }
 
       setClips(data.clips ?? []);
+      setAnalysisSource(data.source ?? null);
+
       if (data.clips?.length === 0) {
         setError("AI couldn't find any clip-worthy moments in this video. Try another video.");
         setStep("url");
@@ -361,6 +373,10 @@ export default function Home() {
             {/* Trust signals */}
             <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-foreground/30 text-xs">
               <span className="flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5" />
+                API key protected server-side
+              </span>
+              <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 No sign-up
               </span>
@@ -415,6 +431,22 @@ export default function Home() {
               <p className="text-foreground/50 text-sm">
                 Upload your original video file to clip these segments.
               </p>
+
+              {/* Fallback/source badge */}
+              {analysisSource && (
+                <div className="mt-3 inline-flex items-center gap-1.5 bg-accent/10 text-accent text-xs font-medium px-3 py-1.5 rounded-full border border-accent/20">
+                  {analysisSource === "twelvelabs" ? (
+                    <Sparkles className="w-3 h-3" />
+                  ) : (
+                    <Shield className="w-3 h-3" />
+                  )}
+                  <span>
+                    {analysisSource === "twelvelabs"
+                      ? "Powered by Twelve Labs AI"
+                      : "Heuristic timestamps — upload your original file to preview exact moments"}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Clip suggestions */}
