@@ -1,10 +1,12 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams, Navigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { Navigate } from "react-router-dom";
 import {
   getMyChannel,
   getTopVideos,
+  getPublicChannelById,
+  getPublicChannelByHandle,
+  getPublicTopVideos,
   type YouTubeChannel,
   type YouTubeVideo,
 } from "../lib/youtube";
@@ -17,6 +19,8 @@ import {
   ArrowUpDown,
   LogOut,
   RefreshCw,
+  Home,
+  User,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -115,8 +119,13 @@ function SkeletonCard() {
 // ---------------------------------------------------------------------------
 
 export default function Dashboard() {
-  const { user, loading: authLoading, signOut, googleAccessToken } = useAuth();
+  const { user, loading: authLoading, signOut, googleAccessToken, clearGuestMode } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const isGuest = searchParams.get("guest") === "1" && !user;
+  const channelId = searchParams.get("channel");
+  const handle = searchParams.get("handle");
 
   const [channel, setChannel] = useState<YouTubeChannel | null>(null);
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
@@ -127,39 +136,72 @@ export default function Dashboard() {
   const sortedVideos = useMemo(() => sortVideos(videos, sort), [videos, sort]);
 
   useEffect(() => {
-    if (!googleAccessToken) return;
-
     let cancelled = false;
 
-    async function load() {
+    async function loadAuth() {
+      if (!googleAccessToken) return;
       setLoading(true);
       setError(null);
       try {
         const ch = await getMyChannel(googleAccessToken!);
         if (cancelled) return;
         setChannel(ch);
-        const vids = await getTopVideos(
-          googleAccessToken!,
-          ch.uploadsPlaylistId,
-        );
+        const vids = await getTopVideos(googleAccessToken!, ch.uploadsPlaylistId);
         if (cancelled) return;
         setVideos(vids);
       } catch (err) {
         if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : "Something went wrong.",
-          );
+          setError(err instanceof Error ? err.message : "Something went wrong.");
         }
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
 
-    load();
+    async function loadGuest() {
+      if (!isGuest) return;
+      setLoading(true);
+      setError(null);
+      try {
+        let ch: YouTubeChannel | null = null;
+
+        if (channelId) {
+          ch = await getPublicChannelById(channelId);
+        } else if (handle) {
+          ch = await getPublicChannelByHandle(handle);
+        }
+
+        if (cancelled) return;
+
+        if (!ch) {
+          setError("Couldn't find that YouTube channel. Check the link and try again.");
+          setLoading(false);
+          return;
+        }
+
+        setChannel(ch);
+        const vids = await getPublicTopVideos(ch.uploadsPlaylistId);
+        if (cancelled) return;
+        setVideos(vids);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Something went wrong.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    if (isGuest) {
+      loadGuest();
+    } else {
+      loadAuth();
+    }
+
     return () => {
       cancelled = true;
     };
-  }, [googleAccessToken]);
+  }, [googleAccessToken, isGuest, channelId, handle]);
 
   // Auth guards
   if (authLoading) {
@@ -173,25 +215,51 @@ export default function Dashboard() {
     );
   }
 
-  if (!user) {
+  if (!user && !isGuest) {
     return <Navigate to="/" replace />;
   }
+
+  const handleExitGuest = () => {
+    clearGuestMode();
+    navigate("/");
+  };
 
   return (
     <div className="min-h-screen bg-background">
       {/* ── Header ── */}
       <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <h1 className="text-xl font-heading font-bold text-foreground tracking-tight">
-            Viral<span className="text-primary">Cut</span>
-          </h1>
-          <button
-            onClick={signOut}
-            className="flex items-center gap-2 text-foreground/60 hover:text-foreground transition-colors duration-150 cursor-pointer text-sm"
-          >
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              to={isGuest ? "/" : "/dashboard"}
+              className="text-xl font-heading font-bold text-foreground tracking-tight"
+            >
+              Viral<span className="text-primary">Cut</span>
+            </Link>
+            {isGuest && (
+              <span className="inline-flex items-center gap-1.5 bg-primary/10 text-primary text-xs font-medium px-2.5 py-1 rounded-full border border-primary/20">
+                <User className="w-3 h-3" />
+                Guest
+              </span>
+            )}
+          </div>
+          {isGuest ? (
+            <button
+              onClick={handleExitGuest}
+              className="flex items-center gap-2 text-foreground/60 hover:text-foreground transition-colors duration-150 cursor-pointer text-sm"
+            >
+              <Home className="w-4 h-4" />
+              Back to Home
+            </button>
+          ) : (
+            <button
+              onClick={signOut}
+              className="flex items-center gap-2 text-foreground/60 hover:text-foreground transition-colors duration-150 cursor-pointer text-sm"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </button>
+          )}
         </div>
       </header>
 
@@ -201,7 +269,7 @@ export default function Dashboard() {
           <div className="flex flex-col items-center justify-center gap-4 py-20">
             <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 max-w-md text-center">
               <p className="text-destructive font-medium mb-1">
-                Couldn&apos;t load your channel
+                Couldn&apos;t load channel
               </p>
               <p className="text-foreground/60 text-sm mb-4">{error}</p>
               <button
@@ -218,7 +286,6 @@ export default function Dashboard() {
         {/* ── Loading state ── */}
         {loading && !error && (
           <>
-            {/* Channel skeleton */}
             <div className="flex items-center gap-4 mb-8 animate-pulse">
               <div className="w-16 h-16 rounded-full bg-border/50" />
               <div className="space-y-2">
@@ -226,7 +293,6 @@ export default function Dashboard() {
                 <div className="h-4 bg-border/50 rounded w-32" />
               </div>
             </div>
-            {/* Video card skeletons */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {Array.from({ length: 6 }).map((_, i) => (
                 <SkeletonCard key={i} />
@@ -293,8 +359,9 @@ export default function Dashboard() {
                   No videos found
                 </p>
                 <p className="text-foreground/30 text-sm mt-1 max-w-sm">
-                  Once you upload videos to your YouTube channel, they&apos;ll
-                  appear here ready for clipping.
+                  {isGuest
+                    ? "This channel hasn't uploaded any videos yet."
+                    : "Once you upload videos to your YouTube channel, they'll appear here ready for clipping."}
                 </p>
               </div>
             ) : (
@@ -302,7 +369,7 @@ export default function Dashboard() {
                 {sortedVideos.map((video) => (
                   <button
                     key={video.id}
-                    onClick={() => navigate(`/analyze/${video.id}`)}
+                    onClick={() => navigate(`/analyze/${video.id}${isGuest ? "?guest=1" : ""}`)}
                     className="group bg-muted border border-border rounded-xl overflow-hidden text-left hover:border-primary/30 hover:-translate-y-1 transition-all duration-200 cursor-pointer focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {/* Thumbnail */}
