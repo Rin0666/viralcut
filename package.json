@@ -1,5 +1,5 @@
 {
-  "name": "my-app",
+  "name": "viralcut",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@supabase/supabase-js": "^2.112.2",
     "@tailwindcss/vite": "^4.1.18",
     "lucide-react": "^1.30.0",
