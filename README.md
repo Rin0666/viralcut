@@ -1,4 +1,4 @@
-# ViralCut 🎬✂️
+# ViralCut
 
 **Turn your long-form YouTube videos into viral short clips — powered by AI.**
 
@@ -10,12 +10,12 @@ ViralCut is a web app that connects to your YouTube channel, analyzes your top-p
 
 ## Features
 
-- 🔗 **Google OAuth sign-in** — single-click login with YouTube scopes
-- 📊 **Channel Dashboard** — browse your top YouTube videos sorted by views, likes, comments, or date
-- 🤖 **AI-powered analysis** — identifies viral-worthy moments (Twelve Labs)
-- ✂️ **Browser-side clipping** — lossless video cutting via ffmpeg.wasm (your file never leaves your machine)
-- 🎬 **Post to YouTube Shorts** — upload clips directly from the browser
-- 💾 **Download clips** — save locally as an alternative
+- **Google OAuth sign-in** — single-click login with YouTube scopes
+- **Channel Dashboard** — browse your top YouTube videos sorted by views, likes, comments, or date
+- **AI-powered analysis** — identifies viral-worthy moments (Twelve Labs)
+- **Browser-side clipping** — lossless video cutting via ffmpeg.wasm (your file never leaves your machine)
+- **Post to YouTube Shorts** — upload clips directly from the browser
+- **Download clips** — save locally as an alternative
 
 ---
 
